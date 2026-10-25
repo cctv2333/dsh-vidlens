@@ -1,6 +1,9 @@
 # VidLens for DeepSeek Harness
 
 [![ci](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml/badge.svg)](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/dsh-vidlens.svg)](https://www.npmjs.com/package/dsh-vidlens)
+[![PyPI](https://img.shields.io/pypi/v/vidlens-mcp.svg)](https://pypi.org/project/vidlens-mcp/)
+[![DSH plugin](https://img.shields.io/badge/topic-dsh--plugin-4B5563)](https://github.com/topics/dsh-plugin)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 把 [vidlens](https://github.com/cctv2333/vidlens) 从一个 stdio MCP 外壳变成 **DSH 原生插件**：18 个 `vidlens_*` 工具、图片直接进对话、按工具设超时、外加三个零下载的缓存工具。

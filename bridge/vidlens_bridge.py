@@ -102,6 +102,36 @@ except BaseException as exc:  # noqa: BLE001 - report, never crash the loop
     IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
     traceback.print_exc(file=sys.stderr)
 
+_INSTALL_HINT = (
+    "vidlens 依赖没法导入。两种修法（任选一种）：\n"
+    "  1) pip install vidlens-mcp —— 然后让插件用同一个解释器：\n"
+    "     插件配置项 pythonPath，或环境变量 VIDLENS_PYTHON。\n"
+    "  2) 用已有的 checkout：把 VIDLENS_PROJECT 设成含 vidlens.py 的目录。\n"
+    "     本进程已经找过: {project}"
+)
+
+
+def _import_error_text() -> str:
+    """Turn a bare ImportError into something the user can act on.
+
+    The raw traceback goes to stderr (visible in the bridge log); what reaches the
+    model is the failure plus the two ways to fix it. Without this the whole plugin
+    answers every call with ``No module named 'vidlens'`` and no lead on why.
+    """
+    err = IMPORT_ERROR or ""
+    hint = _INSTALL_HINT.format(project=PROJECT)
+    match = re.search(r"No module named '([^']+)'", err)
+    if not match:
+        return f"{err}\n\n{hint}"
+    missing = match.group(1).split(".")[0]
+    if missing == "mcp":
+        pip = "pip install mcp"
+    elif missing in ("vl_mcp",) or missing.startswith("vidlens"):
+        pip = "pip install vidlens-mcp"
+    else:
+        pip = f"pip install {missing}"
+    return f"{err}\n\n缺 Python 包 {missing}。先试：{pip}\n{hint}"
+
 
 # ---------------------------------------------------------------- result shaping
 _EXT_MEDIA = {
@@ -422,7 +452,7 @@ _install_dispatch()
 
 def _handle(req: dict) -> dict:
     if IMPORT_ERROR:
-        raise RuntimeError("vidlens 依赖导入失败: " + IMPORT_ERROR)
+        raise RuntimeError("vidlens 依赖导入失败: " + _import_error_text())
     tool = str(req.get("tool") or "")
     entry = DISPATCH.get(tool)
     if entry is None:
@@ -457,7 +487,7 @@ def main() -> int:
         "project": str(PROJECT),
         "python": sys.version.split()[0],
         "tools": sorted(DISPATCH),
-        "error": IMPORT_ERROR,
+        "error": _import_error_text() if IMPORT_ERROR else None,
     })
     for line in sys.stdin:
         line = line.strip()

@@ -1,0 +1,24 @@
+version: 2
+
+updates:
+  # The plugin itself has no runtime dependencies; this keeps typosquat-free
+  # devDependencies current and surfaces anything that starts pulling a tree in.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+    groups:
+      dev-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
