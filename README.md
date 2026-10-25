@@ -228,6 +228,19 @@ CI 里没有任何长期 token。npm 的 publisher 只能在包存在后配置�
   没有在浏览器里验证（无头浏览器对 `file:` / `data:` 导航超时），这一项留待用户目视确认。
 
 
+## 路线图
+
+产品级路线图（已做 / 未做 / 验收标准 / 不做清单）在工程仓库：
+[vidlens/ROADMAP.md](https://github.com/cctv2333/vidlens/blob/main/ROADMAP.md)。
+
+插件专属待办，按工作量从小到大：
+
+1. `Config` schema（现在 `status: absent`，只能手改 YAML）
+2. `/vl <url>` 斜杠命令
+3. `present` 交付物卡片（brief.md / 拼图）
+4. 右侧栏 Web 面板（缓存列表 + brief 预览 + 时间轴）
+5. 设置页（模型路径 / 代理 / cookie）
+
 ## 边界与已知限制
 
 - **job 状态在进程内存**：`vidlens_job_start` 起的任务，桥进程重启（超时/取消/宿主重启）后会消失；已下的缓存不丢，重跑即可。
