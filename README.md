@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml/badge.svg)](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/dsh-vidlens.svg)](https://www.npmjs.com/package/dsh-vidlens)
-[![PyPI](https://img.shields.io/pypi/v/vidlens-mcp.svg)](https://pypi.org/project/vidlens-mcp/)
+[![PyPI](https://img.shields.io/pypi/v/vidlens-mcp.svg?cacheSeconds=600)](https://pypi.org/project/vidlens-mcp/)
 [![DSH plugin](https://img.shields.io/badge/topic-dsh--plugin-4B5563)](https://github.com/topics/dsh-plugin)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
