@@ -42,6 +42,7 @@
     "icon.svg",
     "LICENSE",
     "README.md",
+    "RELEASING.md",
     "docs/*.md",
     "tools/selftest.mjs",
     "tools/fetch_sound_model.py"
