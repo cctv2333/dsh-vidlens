@@ -1,5 +1,6 @@
 # VidLens for DeepSeek Harness
 
+[![ci](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml/badge.svg)](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 把 [vidlens](https://github.com/cctv2333/vidlens) 从一个 stdio MCP 外壳变成 **DSH 原生插件**：18 个 `vidlens_*` 工具、图片直接进对话、按工具设超时、外加三个零下载的缓存工具。
@@ -191,6 +192,19 @@ node D:\vidlens\vidlens-mcp-dsh\tools\selftest.mjs --live
 拼图实测（时间码烧在每格左上角）：
 
 ![contact sheet](../vidlens/out/BV1PinG6fEPX/sheet_60_72/sheet_60000_72000.jpg)
+
+## 发布（维护者）
+
+- CI：`.github/workflows/ci.yml` —— 会 checkout 两个仓库（本插件 + `cctv2333/vidlens` 作为兄弟目录），
+  装 Python 核心后跑离线自检；另外两个 job 校验 manifest 可发布、tarball 含 `bridge/` 与 `LICENSE`。
+- 发版：打 tag 即发布 npm。
+
+```bash
+git tag v1.2.0 && git push origin v1.2.0
+```
+
+`release.yml` 会 `npm pack`、`npm publish --access public`（需要仓库 secret `NPM_TOKEN`，
+granular token，权限 read+write），并把 tgz 附到 GitHub Release。
 
 ## 实现笔记
 
