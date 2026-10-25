@@ -1,22 +1,37 @@
 # 发布（维护者）
 
-两步：**首次发布只能在本地做一次**（包还不存在，npm 没有「包设置」页可配 Trusted Publisher），
-**之后全部走 OIDC**，CI 里没有任何长期 token。
+首次发布用 **staged publishing**（`npm stage publish` **不需要 2FA**，批准时才要）；
+之后全部走 **OIDC Trusted Publishing**，CI 里没有任何长期 token。
 
-## 1. 首次发布（只做一次 · 本地）
+> 别用 `npm publish` 做首次发布：npm 现在对它强制 2FA，CLI 的 `--otp` 也常被同样拒绝
+> （`403 ... bypass 2fa enabled is required`）。
+
+## 1. 首次发布：stage（不需要 2FA）
 
 ```powershell
+npm --version                     # 需要 >= 11.15.0，低了就 npm i -g npm@latest
 cd D:\vidlens\vidlens-mcp-dsh
-npm login                     # 浏览器授权，或按提示输入 OTP
-npm publish --access public   # 账号开了 2FA 会要一次 OTP；这是交互式的，不需要 token
+npm stage publish --access public
+npm stage list                    # 记下 id，等 status 变成 staged
 ```
 
-成功后包就有了：<https://www.npmjs.com/package/dsh-vidlens>
+新包会先在 registry 上生成一个 `0.0.0-stage` 占位版本（公开可见），
+真正要发的版本留在 staging 区，**批准后才上线**。
 
-> 为什么不走 CI：npm 的 Trusted Publisher 配置在**包设置**里，包不存在时没有这个页面。
-> 这一步也**不需要**把任何 token 交给 CI。
+## 2. 批准（要 2FA，只有你能做）
 
-## 2. 配置 Trusted Publisher（一次性）
+**用命令行，最可靠**（网页的 Staged Packages 入口时有时无，`/package/<name>/staged` 可能 404）：
+
+```powershell
+npm stage approve <stage-id>      # 会提示输入 6 位 OTP
+npm view dsh-vidlens versions     # 批准后应能看到目标版本
+```
+
+> OTP 只有 30 秒有效，输慢了就重来。
+> 如果 2FA 是「安全密钥（WebAuthn）」而不是验证器 App，CLI 无法输入 OTP——
+> 先把 npm 账号的 2FA 改成 TOTP（Authenticator app）再重试。
+
+## 3. 配置 Trusted Publisher（一次性）
 
 1. 打开 <https://www.npmjs.com/package/dsh-vidlens/access>
    （或包页 → **Settings** → **Trusted Publisher**）
@@ -24,7 +39,7 @@ npm publish --access public   # 账号开了 2FA 会要一次 OTP；这是交互
 
    | 字段 | 值 |
    |---|---|
-   | Organization or user | `cctv2333` |
+   | Organization or user | `cctv2333` ← **GitHub** 用户名（不是 npm 的 `ghost120`） |
    | Repository | `dsh-vidlens` |
    | Workflow filename | `release.yml`（只写文件名，带 `.yml`） |
    | Environment name | 留空 |
