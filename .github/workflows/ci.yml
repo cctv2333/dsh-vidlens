@@ -1,0 +1,97 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf-8
+  HF_HUB_DISABLE_XET: "1"
+
+jobs:
+  selftest:
+    name: bridge selftest (offline)
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout this plugin
+        uses: actions/checkout@v4
+        with:
+          path: dsh-vidlens
+
+      # The plugin drives the Python core; the selftest needs it as a sibling
+      # directory because that is the layout the bridge auto-detects.
+      - name: checkout vidlens (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: cctv2333/vidlens
+          path: vidlens
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: install the Python core (no ASR backends needed offline)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ./vidlens
+
+      - name: tool table + bridge handshake + cache tools + respawn
+        working-directory: dsh-vidlens
+        run: node tools/selftest.mjs
+
+  package:
+    name: npm package contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: manifest is valid and publishable in shape
+        run: |
+          node - <<'JS'
+          const pkg = require('./package.json')
+          if (!pkg.dsh?.bundle?.patch) throw new Error('missing dsh.bundle.patch')
+          if (!pkg.engines?.dsh) throw new Error('missing engines.dsh')
+          if (!pkg.license) throw new Error('missing license')
+          if (pkg.private === true) throw new Error('package is private: npm publish would refuse')
+          console.log('manifest ok:', pkg.name, pkg.version, pkg.license)
+          JS
+
+      - name: the tarball ships the bridge, the icon and the license
+        run: |
+          npm pack --dry-run --json 2>/dev/null > pack.json
+          node - <<'JS'
+          const files = require('./pack.json')[0].files.map((f) => f.path)
+          for (const need of ['index.js', 'bridge/vidlens_bridge.py', 'cordis.patch.yml',
+                              'icon.svg', 'LICENSE', 'locale/zh.json', 'tools/selftest.mjs']) {
+            if (!files.includes(need)) throw new Error('missing from tarball: ' + need)
+          }
+          for (const bad of ['.venv', '__pycache__', 'out/']) {
+            if (files.some((f) => f.startsWith(bad))) throw new Error('must not ship: ' + bad)
+          }
+          console.log('tarball ok:', files.length, 'files')
+          JS
+
+  bridge-syntax:
+    name: python bridge compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile bridge/vidlens_bridge.py tools/fetch_sound_model.py

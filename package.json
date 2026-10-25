@@ -1,0 +1,54 @@
+{
+  "name": "dsh-vidlens",
+  "version": "1.2.0",
+  "type": "module",
+  "description": "VidLens for DeepSeek Harness: turn a public video into an evidence table (timecoded transcript, sampling sheets, sound events, comments) without downloading the whole file. 18 native tools backed by the local vidlens Python core.",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "vidlens",
+    "video",
+    "transcript",
+    "asr",
+    "sound-events",
+    "tool"
+  ],
+  "license": "MIT",
+  "author": "cctv2333",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cctv2333/dsh-vidlens.git"
+  },
+  "homepage": "https://github.com/cctv2333/dsh-vidlens#readme",
+  "bugs": {
+    "url": "https://github.com/cctv2333/dsh-vidlens/issues"
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "bridge/vidlens_bridge.py",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "LICENSE",
+    "README.md",
+    "docs/*.md",
+    "tools/selftest.mjs",
+    "tools/fetch_sound_model.py"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

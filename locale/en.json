@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "VidLens — Video Evidence",
+    "description": "Turns a public video into an evidence table: timecoded transcript, sampling sheets with burned timecodes, comments and audio signals. Reads metadata, captions and cache first, downloads only the seconds it needs, and never the whole file by default."
+  }
+}

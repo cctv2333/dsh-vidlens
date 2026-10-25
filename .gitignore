@@ -1,0 +1,10 @@
+# Python worker bytecode (created when selftest compiles the bridge)
+__pycache__/
+*.pyc
+
+# Local overrides
+node_modules/
+
+# Pack / CI leftovers
+*.tgz
+pack.json

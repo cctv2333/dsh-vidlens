@@ -1,0 +1,16 @@
+# dsh-vidlens bundle layer.
+#
+# One Host row. It registers 17 native vidlens_* tools, one system-prompt section
+# and owns the long-lived Python worker. No Client half, no MCP server row: the
+# tool bodies are the already-tested `vl_mcp` functions, reached through
+# bridge/vidlens_bridge.py.
+#
+# Optional config (all fields may be omitted):
+#   projectDir : path to the vidlens project (defaults to <bundle>/../vidlens,
+#                then D:\vidlens\vidlens, then $VIDLENS_PROJECT)
+#   pythonPath : interpreter to run the bridge (defaults to <projectDir>/.venv/Scripts/python.exe)
+#   warm       : false disables the eager worker start (default true)
+- insert:
+    - id: dsh-vidlens
+      name: 'dsh-vidlens'
+      config: {}
