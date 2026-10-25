@@ -29,7 +29,6 @@ jobs:
         run: npm pack 2>/dev/null
 
       - name: publish
-        if: ${{ secrets.NPM_TOKEN != '' }}
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
