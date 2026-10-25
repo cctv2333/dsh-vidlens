@@ -49,6 +49,21 @@ plugin_manager action=install_bundle target=dsh-vidlens
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | `404 Not Found - PUT ...` | token 没有该包写权限 / 包名已被占用 | 确认 granular token 为 `All packages` + read/write；`npm view dsh-vidlens` 确认没被抢 |
-| `403 Forbidden` + `two-factor` | 账号开了 2FA 但用的是 legacy token | 改用 granular token（可绕过发布时的 2FA） |
+| `403` + `Two-factor authentication or granular access token with bypass 2fa enabled is required` | 账号开了 2FA，而 granular token **没有**勾「bypass 2FA」 | 见下方「2FA」一节 |
 | `E409` / `cannot publish over` | 同版本号已存在 | 改 `package.json` 的 version 再打 tag |
 | CI 里 selftest 失败 | `cctv2333/vidlens` 私有或被删 | 两个仓库都必须是 public，或给 checkout 加 token |
+
+### 2FA（实测踩过）
+
+npm 账号开了 2FA 时，CI 里的 `npm publish` 会要求**二选一**：
+
+1. **Granular token 打开 bypass 2FA**
+   <https://www.npmjs.com/settings/~/tokens> → 编辑该 token（或新建）→ 打开
+   **"Bypass two-factor authentication (2FA)"**（在 token 表单的 2FA 区域）→ 保存，
+   把新值更新到 GitHub secret `NPM_TOKEN`。
+2. **Classic token 选 Automation**
+   Generate New Token → **Classic Token** → 类型选 **Automation**
+   （Automation token 天生绕过 2FA，专门给 CI 用）。
+
+更新 secret 后不需要重新打 tag：在 Actions 里打开失败的 `release` run →
+**Re-run failed jobs** 即可（npm 上没有 1.2.0，不会撞版本号）。
