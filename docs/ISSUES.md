@@ -30,6 +30,7 @@
 | I-023 | `[FIXED]` 1.1.0 | 相邻窗口同名标签被拆成两段（如 `Speech synthesizer` 出现两次） | 合并阈值原为固定 0.51s，hop=5s 时接不上 | 改为 `gap = hop × 1.2`，传 hop 进 `_segments` |
 | I-024 | `[OPEN]` | `AudioTagging` 实例非线程安全 | sherpa-onnx 的 C++ 对象无可重入保证 | 模块内一把 `threading.Lock` 串行化；桥本身也单线程 |
 | I-025 | `[OPEN]` | 声音事件没有进 `brief.md`（只有独立工具） | `build_brief` 未调用 `ae.scan` | 需要时再按 `soundscape=true` 增量加，避免每个视频平白多算 CPU |
+| I-026 | `[FIXED]` 1.2.x | Linux 上拼图整张失败：本机 ffmpeg 无 `drawtext` | GitHub CI（ubuntu）抓到的真实失败：`No such filter: 'drawtext'` | 工程侧 `has_drawtext()` 探测后跳过烧字，照样出图；插件无需改动 |
 
 ## 编码相关的三条硬规则（给以后的人）
 
