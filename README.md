@@ -203,8 +203,11 @@ node D:\vidlens\vidlens-mcp-dsh\tools\selftest.mjs --live
 git tag v1.2.0 && git push origin v1.2.0
 ```
 
-`release.yml` 会 `npm pack`、`npm publish --access public`（需要仓库 secret `NPM_TOKEN`，
-granular token，权限 read+write），并把 tgz 附到 GitHub Release。
+`release.yml` 会 `npm pack`、`npm publish --access public`，走 **Trusted Publishing（OIDC）**——
+CI 里没有任何长期 token。npm 的 publisher 只能在包存在后配置，所以**首次发布要在本地做一次**
+（`npm login` → `npm publish`，见 `RELEASING.md`），之后打 tag 即可。
+
+> 注意：PowerShell 5.1 不支持 `&&`，用 `;` 或分行。
 
 ## 实现笔记
 
