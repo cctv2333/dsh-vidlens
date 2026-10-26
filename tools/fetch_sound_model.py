@@ -34,11 +34,27 @@ FILES = ("model.int8.onnx", "class_labels_indices.csv")
 
 
 def default_dir() -> Path:
+    """Same rule as vidlens.models_root(), without importing the project.
+
+    The legacy `D:\\dev\\models` is a candidate only if it exists: on anybody
+    else's machine that directory is not theirs to write into.
+    """
     env = os.environ.get("VIDLENS_TAGGING_DIR")
     if env:
         return Path(env).expanduser()
     root = os.environ.get("VIDLENS_MODEL_ROOT")
-    base = Path(root).expanduser() if root else Path(r"D:\dev\models")
+    if root:
+        base = Path(root).expanduser()
+    else:
+        legacy = Path(r"D:\dev\models")
+        if legacy.is_dir():
+            base = legacy
+        elif os.name == "nt":
+            base = (Path(os.environ.get("LOCALAPPDATA")
+                         or (Path.home() / "AppData" / "Local")) / "vidlens" / "models")
+        else:
+            base = (Path(os.environ.get("XDG_DATA_HOME")
+                         or (Path.home() / ".local" / "share")) / "vidlens" / "models")
     return base / "audio-tagging" / "ced-mini"
 
 
@@ -103,7 +119,8 @@ def main(argv=None) -> int:
         except Exception as exc:  # noqa: BLE001
             print(f"FAILED {name}: {type(exc).__name__}: {exc}", file=sys.stderr)
             if not args.mirror:
-                print("hint: retry with --mirror（hf-mirror.com）", file=sys.stderr)
+                print("hint: retry with --mirror (hf-mirror.com, for networks that "
+                      "cannot reach huggingface.co)", file=sys.stderr)
             return 1
     print("\nresult:")
     ok = report(dst)

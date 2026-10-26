@@ -167,7 +167,7 @@ set VIDLENS_OCR_AUTO_INSTALL=auto
 | `vidlens_compare(urls=[...])` | **新增**：批量元数据对比（0 媒体下载，最多 8 个） |
 | `vidlens_job_start(url, ..., full=False)` | 长视频后台任务，立即返回 `job_id` |
 | `vidlens_job(job_id, wait_seconds=20)` | 轮询阶段/百分比，完成返回报告 |
-| `vidlens_models(action=list)` | 本地模型目录与硬件建议（只读，不自动下载） |
+| `vidlens_models(action=list)` | 本地模型目录 + 本机真实路径；`action=download, name=..., confirm=true` 才真下（ced-mini 10MB / whisper 75–484MB） |
 | `vidlens_doctor()` | 自检 python/ffmpeg/yt-dlp/依赖/模型/磁盘/网络 |
 
 ## 架构
