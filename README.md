@@ -50,13 +50,14 @@ git clone https://github.com/cctv2333/vidlens && cd vidlens && install.cmd
 然后装本插件（三选一）：
 
 ```powershell
-# A. 本地目录（开发）
-plugin_manager action=install_bundle target=D:\vidlens\vidlens-mcp-dsh
+# A. 本地目录（开发；换成你自己 clone 的位置）
+plugin_manager action=install_bundle target=<你的路径>\dsh-vidlens
 
 # B. GitHub 直装（本包无 build/prepare 脚本，不需要 allowBuilds 权限）
+#    注意：这条会真的 git clone 本仓库，会被 GitHub 记一次 clone
 dsh plugin --profile desktop add github:cctv2333/dsh-vidlens#<sha>
 
-# C. npm（发布后）
+# C. npm（registry，不经过 GitHub）
 dsh plugin --profile desktop add dsh-vidlens
 ```
 
