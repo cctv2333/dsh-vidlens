@@ -103,7 +103,7 @@ dsh plugin --profile desktop add dsh-vidlens
 | 工具 | 下载量 | 用途 |
 |---|---|---|
 | `vidlens_window(url, start, end)` | 0（有缓存/字幕）或该窗音频 | 某时间窗的台词与停顿 |
-| `vidlens_brief(url, ...)` | 平台字幕 0；无字幕才下音频 | 完整证据报告（结构/停顿/低置信词/广告段落/风险） |
+| `vidlens_brief(url, ..., level="digest")` | 平台字幕 0；无字幕才下音频 | **摘要**（默认约 1.5k 字：章节 + 5 句关键台词 + 全文路径）；`level="full"` 才给 6–9k 字完整报告（结构/停顿/低置信词/广告段落/风险） |
 | `vidlens_seek(query, url='')` | 0（**新增**） | 在缓存转写里按关键词查原话 → 时间码 |
 | `vidlens_audio(url, start, end)` | 该段音频 | SenseVoice 语种/情感/事件 + 节拍与能量 |
 | `vidlens_soundscape(url, start, end)` | 该段音频 | **新增**：AudioSet 527 类声音事件（吃饭/敲击/水声/碰撞…）+ 概率 + 时间码 |
@@ -115,6 +115,30 @@ dsh plugin --profile desktop add dsh-vidlens
 | `vidlens_sheet(url, start, end, cols, rows)` | 该段（20s≈0.9MB） | 带绝对时间码的拼图 |
 | `vidlens_frames(url, at=[...])` | 该段 | 最多 6 张精确帧（读小字用） |
 | `vidlens_scan(url, n=24)` | 最低画质整片（7min≈14-21MB，用完即删） | 全片抽样拼图（无音频视频） |
+
+### 上下文预算（为什么默认给摘要）
+
+一次「看视频」如果按老路子走，实测是这么多字符：
+
+| 调用 | 字符 | 说明 |
+|---|---|---|
+| `meta` + `plan` | ~730 | 便宜 |
+| `window` × 3（各 1 分钟） | ~2,800 | ~0.9k/分钟 |
+| `soundscape`（60 秒） | ~1,500 | 12 窗 × 8 标签 |
+| `brief`（旧版全量） | **~9,000** | 6–9k 字 ≈ 4–6k tokens |
+| 合计 | **~14,200** | 还没算图片 |
+
+关键不在单次有多大，而在于**这些字符之后每一轮都在上下文里**。一个 64k 窗口，
+两三个视频 + 正常对话就会顶到上限，于是出现「看完视频就超上下文」。
+
+所以默认改成三档，按需升级：
+
+1. `vidlens_brief` → **摘要**（约 0.7–1.5k 字：标题/时长/语音覆盖/章节/5 句均匀取样的关键台词/全文路径）；
+2. `vidlens_window` → 只读某一段（约 0.8k 字/分钟），读细节用它，别用 brief 代；
+3. `vidlens_brief(level="full")` → 完整报告（6–9k 字），**只在用户明确要全文时**用一次。
+
+全文始终写在 `out/<id>/brief.md`，不会丢；摘要里直接给路径和下一次该调什么。
+`vidlens_window` 另有 80 行上限，超了会明说「还有 N 行，缩小范围」而不是无限倾倒。
 
 **判断 / 长视频 / 自检**
 

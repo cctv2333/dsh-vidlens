@@ -386,11 +386,15 @@ const TOOLS = [
     name: 'vidlens_brief',
     bridge: 'brief',
     timeoutMs: 900_000,
-    description: '完整证据报告：平台字幕优先（0 下载），无字幕才下音频做本地 ASR；含结构/停顿/低置信词/广告段落/风险扫描。'
-      + '超过 20 分钟且无平台字幕时默认只给章节建议；确实要全量逐字才传 full=true。只看画面用 vidlens_sheet / vidlens_frames，不要下整片。',
+    description: '看一个视频：默认只回摘要（约 1.5k 字 = 章节 + 5 句关键台词 + 全文路径），'
+      + '平台字幕优先（0 下载），无字幕才下音频做本地 ASR。摘要足够回答大多数问题；'
+      + '要完整报告（6–9k 字，之后每轮都占上下文）才传 level="full"。'
+      + '超过 20 分钟且无平台字幕时默认只给章节建议；确实要全量逐字才传 full=true。'
+      + '只看画面用 vidlens_sheet / vidlens_frames，不要下整片。',
     parameters: P({
       url: URL_ARG,
       lang: str('ASR 语言，默认 zh；粤语 yue、日语 ja 等'),
+      level: str('digest（默认，约 1.5k 字）或 full（完整报告 6–9k 字，会长期占上下文）'),
       model: str('Whisper 模型名，默认 small（仅在没有 SenseVoice 时用到）'),
       scan_cuts: bool('额外扫镜头切点（会下最低画质视频，约 14-21MB，用完即删）'),
       refresh: bool('忽略缓存，强制重新转写'),
@@ -589,6 +593,9 @@ const PROMPT = `## vidlens（本地视频取证）
 5. 超过 20 分钟且无字幕时，\`vidlens_brief\` 只给章节是正常行为；要全量逐字用 \`vidlens_job_start(full=true)\` → \`vidlens_job\` 轮询。
 
 - 开工前先 \`vidlens_library\`，已处理过的视频不要重复下载；问「他哪分钟说过 X」用 \`vidlens_seek\`。
+- **上下文预算**：\`vidlens_brief\` 默认只给摘要（约 1.5k 字）；\`level="full"\` 是 6–9k 字，只在用户明确要全文时才用，
+  而且同一个视频**不要重复调用**（结果已经在上文里了）。看细节用 \`vidlens_window\`（约 0.8k 字/分钟），
+  不要用 brief 代替 window。图片不要连发：一次 1 张，\`vidlens_frames\` 一次最多 2 张，除非用户要求更多。
 - 问「有没有敲桌子/吃饭/水声/杂音」用 \`vidlens_soundscape\`（AudioSet 527 类 + 概率 + 时间码）；
   它识别不了「喝水/吞咽」这类动作，别把概率当事实。
 - 一次评估多个链接用 \`vidlens_compare\`（0 媒体下载）。
