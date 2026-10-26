@@ -326,7 +326,12 @@ def tool_library(args: dict) -> str:
 
     entries.sort(key=lambda e: -e["mtime"])
     shown = entries[:limit]
-    out = [f"# 本地缓存 {len(entries)} 个视频（显示 {len(shown)}）", "", f"目录: {root}", ""]
+    total_mb = round(sum(e["mb"] for e in entries), 1)
+    # The cache grows by design and nothing prunes it automatically: say how big it
+    # is here, where people actually look, instead of only in `vidlens_doctor`.
+    out = [f"# 本地缓存 {len(entries)} 个视频（显示 {len(shown)}），共 {total_mb} MB",
+           "", f"目录: {root}",
+           f"清理: `vl clean --days 7`（默认只删媒体，保留 brief.md）", ""]
     for e in shown:
         flags = []
         if e["brief"]:
