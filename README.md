@@ -102,6 +102,7 @@ dsh plugin --profile desktop add dsh-vidlens
 
 | 工具 | 下载量 | 用途 |
 |---|---|---|
+| `vidlens_watch(url, minutes=5, cursor="next")` | 每段该窗音频（或缓存） | **新增**：一段一段看（默认 5 分钟、约 0.5k 字），返回该段要点 + 「已看 X / 共 Y（%）」，并要求先汇报、再问用户要不要继续 |
 | `vidlens_window(url, start, end)` | 0（有缓存/字幕）或该窗音频 | 某时间窗的台词与停顿 |
 | `vidlens_brief(url, ..., level="digest")` | 平台字幕 0；无字幕才下音频 | **摘要**（默认约 1.5k 字：章节 + 5 句关键台词 + 全文路径）；`level="full"` 才给 6–9k 字完整报告（结构/停顿/低置信词/广告段落/风险） |
 | `vidlens_seek(query, url='')` | 0（**新增**） | 在缓存转写里按关键词查原话 → 时间码 |

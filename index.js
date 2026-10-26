@@ -403,6 +403,21 @@ const TOOLS = [
     }, ['url']),
   },
   {
+    name: 'vidlens_watch',
+    bridge: 'watch',
+    timeoutMs: 600_000,
+    description: '分段看片：一次只看一段（默认 5 分钟，约 1k 字），返回该段要点 + 「已看多少 / 共多少（百分比）」，看完就停。'
+      + '这是「看一点、说一点、问一次」的入口：第一段看完先把这一段讲给用户、问要不要继续，'
+      + '用户同意再调一次（cursor="next" 自动接着上次进度）。长视频不要用 vidlens_brief(level="full") 一口气拉全文。',
+    parameters: P({
+      url: URL_ARG,
+      minutes: num('每段多少分钟，默认 5'),
+      cursor: str('next（默认，接着上次）| restart（从头）| stop（清掉进度）'),
+      lang: str('ASR 语言，默认 zh'),
+      model: str('Whisper 模型名，默认 small'),
+    }, ['url']),
+  },
+  {
     name: 'vidlens_window',
     bridge: 'window',
     timeoutMs: 300_000,
@@ -588,14 +603,21 @@ const PROMPT = `## vidlens（本地视频取证）
 
 1. \`vidlens_meta\`（0 下载）判断值不值得看；
 2. \`vidlens_plan\`（0 下载）拿章节，挑 2–3 段；
-3. 每段：\`vidlens_window\` 读台词，\`vidlens_sheet\` 看画面（图片直接出现在结果里）；
-4. 平台字幕优先：\`vidlens_subs\`（0 下载）；没有字幕才让 \`vidlens_brief\` 走本地 ASR；
-5. 超过 20 分钟且无字幕时，\`vidlens_brief\` 只给章节是正常行为；要全量逐字用 \`vidlens_job_start(full=true)\` → \`vidlens_job\` 轮询。
+3. 长视频（>10 分钟）用 \`vidlens_watch\` **一段一段地看**（每段默认 5 分钟、约 1k 字）；
+4. 每段：\`vidlens_window\` 读台词，\`vidlens_sheet\` 看画面（图片直接出现在结果里）；
+5. 平台字幕优先：\`vidlens_subs\`（0 下载）；没有字幕才让 \`vidlens_brief\` 走本地 ASR；
+6. 超过 20 分钟且无字幕时，\`vidlens_brief\` 只给章节是正常行为；要全量逐字用 \`vidlens_job_start(full=true)\` → \`vidlens_job\` 轮询。
 
+- **分段推进，看一点说一点**：\`vidlens_watch\` 每返回一段，先把这一段讲给用户
+  （内容 + 你的初步判断），再报进度（「已看 05:00 / 40:45，12%」），然后**停下来问**：
+  「继续看下一段，还是先就这一段展开，或者只挑关键段？」。
+  用户同意再调一次；**不要**在同一轮里连着调很多次 watch，也不要偷偷把全片拉完。
+  粗略看完就说「只粗看了一遍，还不能下定论」，别说成已经仔细看过。
 - 开工前先 \`vidlens_library\`，已处理过的视频不要重复下载；问「他哪分钟说过 X」用 \`vidlens_seek\`。
 - **上下文预算**：\`vidlens_brief\` 默认只给摘要（约 1.5k 字）；\`level="full"\` 是 6–9k 字，只在用户明确要全文时才用，
   而且同一个视频**不要重复调用**（结果已经在上文里了）。看细节用 \`vidlens_window\`（约 0.8k 字/分钟），
-  不要用 brief 代替 window。图片不要连发：一次 1 张，\`vidlens_frames\` 一次最多 2 张，除非用户要求更多。
+  不要用 brief 代替 window。图片不要连发：一次 1 张，\`vidlens_frames\` 一次最多 2 张，除非用户要求更多；
+  \`vidlens_comments\` 默认不返回配图（base64 很贵），要看评论图才传 with_images=true。
 - 问「有没有敲桌子/吃饭/水声/杂音」用 \`vidlens_soundscape\`（AudioSet 527 类 + 概率 + 时间码）；
   它识别不了「喝水/吞咽」这类动作，别把概率当事实。
 - 一次评估多个链接用 \`vidlens_compare\`（0 媒体下载）。

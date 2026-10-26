@@ -429,6 +429,7 @@ def _install_dispatch() -> None:
         "subs": vl.video_subs,
         "brief": vl.video_brief,
         "window": vl.video_window,
+        "watch": vl.video_watch,
         "audio": vl.video_audio,
         "soundscape": vl.video_soundscape,
         "sheet": vl.video_sheet,
