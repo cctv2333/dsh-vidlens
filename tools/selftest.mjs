@@ -141,6 +141,24 @@ while (!ready && child.exitCode === null && Date.now() < bootDeadline) {
 }
 assert('bridge boot handshake', !!ready, ready ? `py ${ready.python} @ ${ready.project}` : stderr.slice(-500))
 assert('bridge imported vidlens', !!ready?.ok, ready?.error || '')
+
+// The package ships to other machines: a path from the author's disk must never
+// be baked in. (The bridge derives its project dir from env / sibling / cwd.)
+{
+  const { readFileSync } = await import('node:fs')
+  const suspects = ['index.js', path.join('bridge', 'vidlens_bridge.py')]
+  const bad = []
+  for (const rel of suspects) {
+    const text = readFileSync(path.join(ROOT, rel), 'utf8')
+    for (const [i, line] of text.split('\n').entries()) {
+      if (/^\s*(#|\/\/)/.test(line)) continue
+      if (/[A-Za-z]:\\{1,2}Users\\{1,2}\w+/i.test(line) || /D:\\{1,2}vidlens\\{1,2}vidlens/.test(line)) {
+        bad.push(`${rel}:${i + 1}`)
+      }
+    }
+  }
+  assert('no personal paths baked into the shipped code', bad.length === 0, bad.join(', '))
+}
 assert('bridge exposes every tool the Host registers',
   tools.filter((t) => !t.local).every((t) => (ready?.tools || []).includes(t.bridge)),
   `missing: ${tools.filter((t) => !t.local).map((t) => t.bridge).filter((b) => !(ready?.tools || []).includes(b)).join(',')}`)

@@ -43,11 +43,14 @@ function firstExisting(cands) {
 }
 
 function resolveProjectDir(config) {
+  // Only paths that exist are returned, and none of them is somebody's personal
+  // checkout: config -> env -> the sibling repo this plugin was developed next to
+  // -> the current directory. A hardcoded `D:\vidlens\vidlens` used to sit here;
+  // on any other machine it is at best dead weight.
   const found = firstExisting([
     config?.projectDir,
     process.env.VIDLENS_PROJECT,
     path.resolve(HERE, '..', 'vidlens'),
-    'D:\\vidlens\\vidlens',
   ])
   return found || path.resolve(HERE, '..', 'vidlens')
 }
