@@ -1,5 +1,7 @@
 # VidLens for DeepSeek Harness
 
+**中文** · [English](README.en.md)
+
 [![ci](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml/badge.svg)](https://github.com/cctv2333/dsh-vidlens/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/dsh-vidlens.svg)](https://www.npmjs.com/package/dsh-vidlens)
 [![PyPI](https://img.shields.io/pypi/v/vidlens-mcp.svg?cacheSeconds=600)](https://pypi.org/project/vidlens-mcp/)
@@ -62,7 +64,8 @@ dsh plugin --profile desktop add github:cctv2333/dsh-vidlens#<sha>
 dsh plugin --profile desktop add dsh-vidlens
 ```
 
-插件会自动找 Python 工程：`<本包>/../vidlens` → `D:\vidlens\vidlens` → `$VIDLENS_PROJECT`；
+插件会自动找 Python 工程：`config.projectDir` → `$VIDLENS_PROJECT` → `<本包>/../vidlens` → 当前目录
+（只认真实存在的目录，不含任何人的本机路径）；
 找不到时按 `$VIDLENS_PYTHON` / `.venv` / `python` 依次尝试。PyPI 安装的形态下，
 把 `projectDir` 指到 `pipx` 的 venv 或直接设 `VIDLENS_PROJECT` 都行（模块名不变）。
 
@@ -87,7 +90,7 @@ dsh plugin --profile desktop add dsh-vidlens
         warm: true
 ```
 
-字段都可省略：`projectDir` 默认依次取 `<本包>/../vidlens`、`D:\vidlens\vidlens`、`$VIDLENS_PROJECT`；`pythonPath` 默认取工程 `.venv` 里的解释器。
+字段都可省略：`projectDir` 默认依次取 `config.projectDir` → `$VIDLENS_PROJECT` → `<本包>/../vidlens` → 当前目录；`pythonPath` 默认取 `$VIDLENS_PYTHON` → 工程的 `.venv` → `python`。
 
 ## 工具（21 个）
 
@@ -131,7 +134,7 @@ dsh plugin --profile desktop add dsh-vidlens
 
 ```
 # 想放 D 盘 + 以后自动装（桥进程会读这两个环境变量）：
-set VIDLENS_OCR_TARGET=D:\vidlens\ocr
+set VIDLENS_OCR_TARGET=D:\your\ocr
 set VIDLENS_OCR_AUTO_INSTALL=auto
 ```
 
@@ -176,7 +179,7 @@ set VIDLENS_OCR_AUTO_INSTALL=auto
 
 ```
 DSH Host (index.js)
-  ├─ 18 × ctx.tools.register(...)        原生工具 + 每工具 timeoutMs
+  ├─ 21 × ctx.tools.register(...)        原生工具 + 每工具 timeoutMs
   ├─ ctx.systemPrompt.section('vidlens') 取样协议（meta→plan→抽样）
   └─ Bridge (常驻)  ──stdin/stdout JSONL──▶  python -u bridge/vidlens_bridge.py
                                                 │
