@@ -755,4 +755,7 @@ export function apply(ctx, config) {
   }
 }
 
-export const __internals = { TOOLS, Bridge, resolveProjectDir, resolvePython, PROMPT, attachImages }
+export const __internals = {
+  TOOLS, Bridge, resolveProjectDir, resolvePython, PROMPT, attachImages,
+  BUDGET_WARN, BUDGET_HARD, enforceBudget, budgetNote, budgetReport, noteSpend,
+}

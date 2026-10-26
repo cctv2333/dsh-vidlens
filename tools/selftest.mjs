@@ -47,6 +47,25 @@ for (const t of tools) {
   }
 }
 assert('prompt section mentions the sampling order', /vidlens_meta/.test(mod.__internals.PROMPT))
+assert('prompt defaults to one coarse answer', /直接给结论/.test(mod.__internals.PROMPT))
+
+// ------------------------------------------------------------- 1b. budget ledger
+{
+  const I = mod.__internals
+  const ledger = { chars: 0, calls: 0 }
+  assert('budget: no note below the warn line', I.budgetNote(ledger) === '')
+  I.noteSpend(ledger, 'x'.repeat(I.BUDGET_WARN + 10))
+  assert('budget: note appears past the warn line', /预算/.test(I.budgetNote(ledger)))
+  const brief = I.TOOLS.find((t) => t.bridge === 'brief')
+  const watch = I.TOOLS.find((t) => t.bridge === 'watch')
+  const comments = I.TOOLS.find((t) => t.bridge === 'comments')
+  assert('budget: full brief is allowed below the ceiling', I.enforceBudget(ledger, brief, { level: 'full' }).level === 'full')
+  ledger.chars = I.BUDGET_HARD + 1
+  assert('budget: brief is clamped to digest past the ceiling', I.enforceBudget(ledger, brief, { level: 'full' }).level === 'digest')
+  assert('budget: watch is clamped to 5 minutes', I.enforceBudget(ledger, watch, { minutes: 30 }).minutes === 5)
+  assert('budget: comment images are forced off', I.enforceBudget(ledger, comments, { with_images: true }).with_images === false)
+  assert('budget: report renders', /台账/.test(I.budgetReport(ledger)))
+}
 
 // -------------------------------------------------------------- 2. python side
 const project = process.env.VIDLENS_PROJECT || path.resolve(ROOT, '..', 'vidlens')
