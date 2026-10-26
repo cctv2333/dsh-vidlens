@@ -493,6 +493,19 @@ const TOOLS = [
     }, ['url']),
   },
   {
+    name: 'vidlens_ocr',
+    bridge: 'ocr',
+    timeoutMs: 600_000,
+    description: '读画面上的字（本地 OCR，离线）：无人声/无字幕视频靠它，输出带时间码。',
+    parameters: P({
+      url: URL_ARG,
+      start: str('起点，默认 0（秒或 MM:SS）'),
+      end: str('终点，默认整片末尾'),
+      n: int('取帧数，默认 12（1–24）'),
+      width: int('取帧宽度，默认 1280'),
+    }, ['url']),
+  },
+  {
     name: 'vidlens_comments',
     bridge: 'comments',
     images: true,

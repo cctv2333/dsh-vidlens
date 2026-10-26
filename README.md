@@ -116,6 +116,15 @@ dsh plugin --profile desktop add dsh-vidlens
 | `vidlens_sheet(url, start, end, cols, rows)` | 该段（20s≈0.9MB） | 带绝对时间码的拼图 |
 | `vidlens_frames(url, at=[...])` | 该段 | 最多 6 张精确帧（读小字用） |
 | `vidlens_scan(url, n=24)` | 最低画质整片（7min≈14-21MB，用完即删） | 全片抽样拼图（无音频视频） |
+| `vidlens_ocr(url, start, end, n=12)` | 该段最低画质 | **把画面上的字读成文本**（本地 OCR，离线）；无人声、无字幕的视频靠它，输出带时间码 |
+
+`vidlens_ocr` 需要一次性装 OCR 依赖（RapidOCR，Apache-2.0，PP-OCRv6 模型随包分发，约 30MB，装完离线）：
+
+```
+"D:\vidlens\vidlens\.venv\Scripts\python.exe" -m pip install rapidocr
+```
+
+没装也不会坏：`vidlens_ocr` 会返回一句「装它只要一步 + pip 命令」，其他工具不受影响。
 
 ### 上下文预算（为什么默认给摘要）
 

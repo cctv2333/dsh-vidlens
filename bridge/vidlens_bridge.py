@@ -439,6 +439,7 @@ def _install_dispatch() -> None:
         "sheet": vl.video_sheet,
         "frames": vl.video_frames,
         "scan": vl.video_visual_scan,
+        "ocr": vl.video_ocr,
         "comments": vl.video_comments,
         "job_start": vl.video_job_start,
         "job": vl.video_job,
