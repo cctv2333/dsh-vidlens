@@ -1,6 +1,6 @@
 {
   "name": "dsh-vidlens",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "type": "module",
   "description": "VidLens for DeepSeek Harness: turn a public video into an evidence table (timecoded transcript, sampling sheets, sound events, comments) without downloading the whole file. 18 native tools backed by the local vidlens Python core.",
   "keywords": [

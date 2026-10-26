@@ -118,13 +118,22 @@ dsh plugin --profile desktop add dsh-vidlens
 | `vidlens_scan(url, n=24)` | 最低画质整片（7min≈14-21MB，用完即删） | 全片抽样拼图（无音频视频） |
 | `vidlens_ocr(url, start, end, n=12)` | 该段最低画质 | **把画面上的字读成文本**（本地 OCR，离线）；无人声、无字幕的视频靠它，输出带时间码 |
 
-`vidlens_ocr` 需要一次性装 OCR 依赖（RapidOCR，Apache-2.0，PP-OCRv6 模型随包分发，约 30MB，装完离线）：
+`vidlens_ocr` 的引擎是可选依赖（RapidOCR，Apache-2.0，PP-OCRv6 模型随包分发，装完离线）。
+**第一次调用不会偷偷下载**：它先告诉你「约 80MB、会装到哪个目录、怎么换目录」，
+再调一次并传 `install: true` 才开始下，结果里会写清装到哪。
+
+| 变量 | 作用 | 默认 |
+|---|---|---|
+| `VIDLENS_OCR_TARGET` | 装到指定目录（自动加入 import 路径，不写系统目录） | 本解释器 `site-packages`（Windows 上通常就是 **C 盘**） |
+| `VIDLENS_OCR_AUTO_INSTALL` | `ask` 先问 / `auto` 自动装 / `off` 只给命令 | `ask` |
 
 ```
-"D:\vidlens\vidlens\.venv\Scripts\python.exe" -m pip install rapidocr
+# 想放 D 盘 + 以后自动装（桥进程会读这两个环境变量）：
+set VIDLENS_OCR_TARGET=D:\vidlens\ocr
+set VIDLENS_OCR_AUTO_INSTALL=auto
 ```
 
-没装也不会坏：`vidlens_ocr` 会返回一句「装它只要一步 + pip 命令」，其他工具不受影响。
+没装也不会坏：`vidlens_ocr` 返回安装说明，其他工具不受影响。
 
 ### 上下文预算（为什么默认给摘要）
 

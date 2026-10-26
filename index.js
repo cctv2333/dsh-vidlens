@@ -495,14 +495,16 @@ const TOOLS = [
   {
     name: 'vidlens_ocr',
     bridge: 'ocr',
-    timeoutMs: 600_000,
-    description: '读画面上的字（本地 OCR，离线）：无人声/无字幕视频靠它，输出带时间码。',
+    timeoutMs: 900_000,
+    description: '读画面上的字（本地 OCR，离线）：无人声/无字幕视频靠它，输出带时间码。'
+      + '首次要装引擎（约 80MB）：先调用一次就知道装到哪、怎么换目录；install=true 才真下。',
     parameters: P({
       url: URL_ARG,
       start: str('起点，默认 0（秒或 MM:SS）'),
       end: str('终点，默认整片末尾'),
       n: int('取帧数，默认 12（1–24）'),
       width: int('取帧宽度，默认 1280'),
+      install: bool('引擎没装时是否就地下载（约 80MB，结果里会报装到哪）'),
     }, ['url']),
   },
   {
