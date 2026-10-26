@@ -191,7 +191,7 @@ DSH Host (index.js)
 
 ```jsonc
 // 启动
-{"op":"ready","ok":true,"pid":1234,"project":"D:\\vidlens\\vidlens","python":"3.12.10","tools":["meta",...]}
+{"op":"ready","ok":true,"pid":1234,"project":"D:\\\\projects\\\\vidlens","python":"3.12.10","tools":["meta",...]}
 // 请求 → 响应
 {"id":7,"tool":"sheet","args":{"url":"...","start":"0","end":"20"}}
 {"id":7,"ok":true,"text":"...","images":[{"path":"...jpg","mediaType":"image/jpeg","name":"sheet_0_20000.jpg"}]}
@@ -210,15 +210,15 @@ DSH Host (index.js)
 **离线（不联网、不下媒体）**
 
 ```powershell
-node D:\vidlens\vidlens-mcp-dsh\tools\selftest.mjs
-# 96/96 checks passed（工具表 + 桥握手 + library/models/seek + 强制杀进程后自愈）
+node tools/selftest.mjs
+# 130/130 checks passed（工具表 + 桥握手 + library/models/seek + 本地路径声明 + 强制杀进程后自愈）
 ```
 
 **带真实链路（约 1MB 媒体）**
 
 ```powershell
-node D:\vidlens\vidlens-mcp-dsh\tools\selftest.mjs --live
-# 98/98 checks passed
+node tools/selftest.mjs --live
+# 130/130 再加 live 3 项（真实链路，约 1MB 媒体）
 ```
 
 **安装后在 DSH 里的实测**（本机 2026-10-25，全部走原生工具通道）
