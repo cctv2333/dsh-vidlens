@@ -65,6 +65,15 @@ assert('prompt defaults to one coarse answer', /直接给结论/.test(mod.__inte
   assert('budget: watch is clamped to 5 minutes', I.enforceBudget(ledger, watch, { minutes: 30 }).minutes === 5)
   assert('budget: comment images are forced off', I.enforceBudget(ledger, comments, { with_images: true }).with_images === false)
   assert('budget: report renders', /台账/.test(I.budgetReport(ledger)))
+
+  const briefTool = I.TOOLS.find((t) => t.bridge === 'brief')
+  const k1 = I.memoKey(briefTool, { url: 'u', level: 'digest' })
+  const k2 = I.memoKey(briefTool, { url: 'u', level: 'full' })
+  const k3 = I.memoKey(briefTool, { url: 'u', level: 'digest', refresh: true })
+  assert('memo: different args give different keys', k1 !== k2)
+  assert('memo: refresh does not change the key (it clears instead)', k1 === k3)
+  assert('memo: repeat stub names the cost', /未重跑/.test(I.repeatStub({ chars: 1234, head: 'x' })))
+  assert('memo: failure stub refuses a blind retry', /未重试/.test(I.failureStub({ error: 'boom' })))
 }
 
 // -------------------------------------------------------------- 2. python side

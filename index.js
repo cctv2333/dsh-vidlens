@@ -611,18 +611,49 @@ const TOOLS = [
 // forced to digest, watch cannot widen its window, comments cannot ship base64.
 const BUDGET_WARN = 12_000
 const BUDGET_HARD = 24_000
+const MEMO_TTL_MS = 20 * 60 * 1000
 const ledgers = new WeakMap()
-const fallbackLedger = { chars: 0, calls: 0 }
+let nextAgentId = 0
+const fallbackLedger = { chars: 0, calls: 0, sessionId: 'shared', memo: new Map() }
 
 function ledgerFor(exec) {
   const agent = exec && exec.agent
   if (!agent || typeof agent !== 'object') return fallbackLedger
   let ledger = ledgers.get(agent)
   if (!ledger) {
-    ledger = { chars: 0, calls: 0 }
+    nextAgentId += 1
+    ledger = { chars: 0, calls: 0, sessionId: `s${nextAgentId}`, memo: new Map() }
     ledgers.set(agent, ledger)
   }
   return ledger
+}
+
+function memoKey(tool, args) {
+  // Volatile arguments must not collapse into the same key.
+  const stable = {}
+  for (const k of Object.keys(args || {}).sort()) {
+    if (k === 'refresh' || k === 'force' || k === 'session') continue
+    stable[k] = args[k]
+  }
+  try {
+    return `${tool.bridge}|${JSON.stringify(stable)}`
+  } catch {
+    return ''
+  }
+}
+
+function repeatStub(hit) {
+  const head = String(hit.head || '').replace(/\n/g, ' ').slice(0, 120)
+  return ['[重复调用，未重跑] 这次调用的参数与上文那次完全相同，结果没有变化，所以不再重传'
+    + `（上次回传 ${hit.chars} 字）。`,
+    head ? `上次开头：${head}` : '',
+    '要看新东西：改参数（换区间/换 level，或传 refresh=true）——原样重试只会再占一遍上下文。']
+    .filter(Boolean).join('\n')
+}
+
+function failureStub(hit) {
+  return ['[上次同样的调用失败过，未重试]', String(hit.error || '').slice(0, 240),
+    '原样重试只会再烧一次上下文；换 URL/参数，或先 vidlens_doctor 看环境。'].join('\n')
 }
 
 function noteSpend(ledger, text) {
@@ -733,13 +764,41 @@ export function apply(ctx, config) {
         const ledger = ledgerFor(exec)
         if (tool.bridge === 'budget') return { text: budgetReport(ledger) }
         const shaped = enforceBudget(ledger, tool, args)
-        const payload = { tool: tool.bridge, args: shaped }
-        const res = await bridge.call(payload, { signal: exec?.signal, timeoutMs: tool.timeoutMs })
+        if (tool.bridge === 'watch') shaped.session = ledger.sessionId
+        if (shaped.refresh === true || shaped.force === true) {
+          const stale = memoKey(tool, shaped)
+          if (stale) ledger.memo.delete(stale)
+        }
+        const key = memoKey(tool, shaped)
+        const hit = key ? ledger.memo.get(key) : null
+        if (hit && Date.now() - hit.at < MEMO_TTL_MS) {
+          return { text: hit.ok ? repeatStub(hit) : failureStub(hit) }
+        }
+        let res
+        try {
+          res = await bridge.call({ tool: tool.bridge, args: shaped },
+            { signal: exec?.signal, timeoutMs: tool.timeoutMs })
+        } catch (err) {
+          if (key) {
+            ledger.memo.set(key, {
+              ok: false, at: Date.now(), error: String(err?.message || err),
+            })
+          }
+          throw err
+        }
         const value = { text: res.text || '' }
         if (tool.images && res.images.length) {
           const { refs, notes } = await attachImages(ctx, res.images)
           if (refs.length) value.images = refs
           if (notes.length) value.text += '\n\n' + notes.map((n) => `（${n}）`).join('\n')
+        }
+        if (key) {
+          ledger.memo.set(key, {
+            ok: true,
+            at: Date.now(),
+            chars: value.text.length,
+            head: value.text.slice(0, 160),
+          })
         }
         noteSpend(ledger, value.text)
         value.text += budgetNote(ledger)
@@ -758,4 +817,5 @@ export function apply(ctx, config) {
 export const __internals = {
   TOOLS, Bridge, resolveProjectDir, resolvePython, PROMPT, attachImages,
   BUDGET_WARN, BUDGET_HARD, enforceBudget, budgetNote, budgetReport, noteSpend,
+  memoKey, repeatStub, failureStub,
 }
