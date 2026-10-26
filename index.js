@@ -593,26 +593,109 @@ const TOOLS = [
     description: '自检：python / ffmpeg / yt-dlp / 依赖 / ASR 模型 / 磁盘 / 网络。哪里断了直接说，并给出修法。',
     parameters: P({}),
   },
+  {
+    name: 'vidlens_budget',
+    bridge: 'budget',
+    local: true,
+    timeoutMs: 5_000,
+    description: '查本次对话已经用掉多少上下文预算（本插件回传的字数与调用次数），以及是否已进入强制摘要模式。零成本、不联网。',
+    parameters: P({}),
+  },
 ]
+
+// --------------------------------------------------------------- context budget
+// DSH hands a tool no session id, but every dispatch carries the Agent it runs
+// for, and there is one Agent per conversation. Keying the ledger on it gives
+// per-chat accounting without inventing ids. The ledger is advisory for the
+// model and a hard clamp for the expensive arguments: past the ceiling, brief is
+// forced to digest, watch cannot widen its window, comments cannot ship base64.
+const BUDGET_WARN = 12_000
+const BUDGET_HARD = 24_000
+const ledgers = new WeakMap()
+const fallbackLedger = { chars: 0, calls: 0 }
+
+function ledgerFor(exec) {
+  const agent = exec && exec.agent
+  if (!agent || typeof agent !== 'object') return fallbackLedger
+  let ledger = ledgers.get(agent)
+  if (!ledger) {
+    ledger = { chars: 0, calls: 0 }
+    ledgers.set(agent, ledger)
+  }
+  return ledger
+}
+
+function noteSpend(ledger, text) {
+  ledger.chars += String(text || '').length
+  ledger.calls += 1
+}
+
+function overBudget(ledger) {
+  return ledger.chars >= BUDGET_HARD
+}
+
+function enforceBudget(ledger, tool, args) {
+  const shaped = { ...(args && typeof args === 'object' ? args : {}) }
+  if (!overBudget(ledger)) return shaped
+  if (tool.bridge === 'brief') shaped.level = 'digest'
+  if (tool.bridge === 'watch') {
+    const minutes = Number(shaped.minutes)
+    shaped.minutes = Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 5) : 5
+  }
+  if (tool.bridge === 'comments') shaped.with_images = false
+  return shaped
+}
+
+function budgetNote(ledger) {
+  if (ledger.chars < BUDGET_WARN) return ''
+  const kb = (ledger.chars / 1000).toFixed(1)
+  const pct = Math.round((ledger.chars / BUDGET_HARD) * 100)
+  const head = `\n\n[预算] 本对话已回传约 ${kb}k 字（${ledger.calls} 次，占软上限 ${pct}%）。`
+  if (overBudget(ledger)) {
+    return head + '已超软上限：后续只能摘要/分段，level=full 与评论配图已被自动关掉。'
+  }
+  return head + '再加一份全文会明显挤占上下文；能回答就别再加料。'
+}
+
+function budgetReport(ledger) {
+  const tokens = Math.round(ledger.chars / 1.4)
+  const state = overBudget(ledger)
+    ? '已超软上限（brief 强制 digest、watch 每段 ≤5 分钟、评论图关闭）'
+    : ledger.chars >= BUDGET_WARN ? '接近软上限（每次回执会带预算提示）' : '正常'
+  return ['# 上下文预算台账（本对话）',
+    `- 已回传文字: ${ledger.chars} 字（中文约 ${tokens} tokens）`,
+    `- 工具调用: ${ledger.calls} 次`,
+    `- 软上限 ${BUDGET_WARN} 字 / 硬上限 ${BUDGET_HARD} 字`,
+    `- 状态: ${state}`,
+    '',
+    '口径：只统计本插件返回的文字长度，不含图片和你自己的推理；重载插件或新会话会重新计数。'].join('\n')
+}
 
 // ----------------------------------------------------------------------- apply
 
 const PROMPT = `## vidlens（本地视频取证）
 
-拿到公开视频链接时，按人类看片的顺序取样，不要一上来就下载整片：
+拿到公开视频链接时，默认「一次答完」，别让用户陪你看片：
 
-1. \`vidlens_meta\`（0 下载）判断值不值得看；
-2. \`vidlens_plan\`（0 下载）拿章节，挑 2–3 段；
-3. 长视频（>10 分钟）用 \`vidlens_watch\` **一段一段地看**（每段默认 5 分钟、约 1k 字）；
-4. 每段：\`vidlens_window\` 读台词，\`vidlens_sheet\` 看画面（图片直接出现在结果里）；
-5. 平台字幕优先：\`vidlens_subs\`（0 下载）；没有字幕才让 \`vidlens_brief\` 走本地 ASR；
-6. 超过 20 分钟且无字幕时，\`vidlens_brief\` 只给章节是正常行为；要全量逐字用 \`vidlens_job_start(full=true)\` → \`vidlens_job\` 轮询。
+1. \`vidlens_meta\`（0 下载）确认时长/字幕；
+2. \`vidlens_brief\`（默认 digest，约 1.5k 字：章节 + 5 句关键台词 + 全文路径）；
+3. **直接给结论**：讲了什么、立场/结构、值不值得看、哪里可疑。
+   不要问「要继续看吗」，不要一段一段汇报——用户要的是结论，不是陪你走流程。
+4. 摘要只抽样看了几个点，所以结论要说「粗看」；不要把它说成逐字看完。
+   要更硬的证据再补一次 \`vidlens_window\`（某段台词）或 \`vidlens_soundscape\`（声音），仍然**一次答完**。
 
-- **分段推进，看一点说一点**：\`vidlens_watch\` 每返回一段，先把这一段讲给用户
-  （内容 + 你的初步判断），再报进度（「已看 05:00 / 40:45，12%」），然后**停下来问**：
-  「继续看下一段，还是先就这一段展开，或者只挑关键段？」。
-  用户同意再调一次；**不要**在同一轮里连着调很多次 watch，也不要偷偷把全片拉完。
-  粗略看完就说「只粗看了一遍，还不能下定论」，别说成已经仔细看过。
+**只有用户明确要「细看 / 详细 / 逐段 / 每段都说」时**才分段：
+\`vidlens_watch\` 一段一段看（默认 5 分钟、约 0.5k 字），每段先把这一段讲给用户、
+报进度（已看 05:00 / 40:45），再问「继续还是先讲这段」。用户说继续才调下一段。
+
+工具顺序（需要更多证据时才往下走）：
+1. \`vidlens_plan\`（0 下载）拿章节，挑 2–3 段；
+2. \`vidlens_window\` 读台词，\`vidlens_sheet\` 看画面（图片直接出现在结果里）；
+3. 平台字幕优先：\`vidlens_subs\`（0 下载）；没有字幕才让 \`vidlens_brief\` 走本地 ASR；
+4. 超过 20 分钟且无字幕时，\`vidlens_brief\` 只给章节是正常行为；要全量逐字用 \`vidlens_job_start(full=true)\` → \`vidlens_job\` 轮询。
+
+- **细看才分段**：只有用户要「细看 / 逐段」时才用 \`vidlens_watch\`；默认模式不要主动分段、也不要说「要不要继续看」。
+  分段时每段先把这一段讲给用户（内容 + 初步判断），报进度（「已看 05:00 / 40:45，12%」），再问一次要不要继续。
 - 开工前先 \`vidlens_library\`，已处理过的视频不要重复下载；问「他哪分钟说过 X」用 \`vidlens_seek\`。
 - **上下文预算**：\`vidlens_brief\` 默认只给摘要（约 1.5k 字）；\`level="full"\` 是 6–9k 字，只在用户明确要全文时才用，
   而且同一个视频**不要重复调用**（结果已经在上文里了）。看细节用 \`vidlens_window\`（约 0.8k 字/分钟），
@@ -647,7 +730,10 @@ export function apply(ctx, config) {
       isConcurrencySafe: () => true,
       timeoutMs: tool.timeoutMs || DEFAULT_TIMEOUT_MS,
       async execute(args, exec) {
-        const payload = { tool: tool.bridge, args: args && typeof args === 'object' ? args : {} }
+        const ledger = ledgerFor(exec)
+        if (tool.bridge === 'budget') return { text: budgetReport(ledger) }
+        const shaped = enforceBudget(ledger, tool, args)
+        const payload = { tool: tool.bridge, args: shaped }
         const res = await bridge.call(payload, { signal: exec?.signal, timeoutMs: tool.timeoutMs })
         const value = { text: res.text || '' }
         if (tool.images && res.images.length) {
@@ -655,6 +741,8 @@ export function apply(ctx, config) {
           if (refs.length) value.images = refs
           if (notes.length) value.text += '\n\n' + notes.map((n) => `（${n}）`).join('\n')
         }
+        noteSpend(ledger, value.text)
+        value.text += budgetNote(ledger)
         return value
       },
     }

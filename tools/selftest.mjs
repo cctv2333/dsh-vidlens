@@ -111,8 +111,8 @@ while (!ready && child.exitCode === null && Date.now() < bootDeadline) {
 assert('bridge boot handshake', !!ready, ready ? `py ${ready.python} @ ${ready.project}` : stderr.slice(-500))
 assert('bridge imported vidlens', !!ready?.ok, ready?.error || '')
 assert('bridge exposes every tool the Host registers',
-  tools.every((t) => (ready?.tools || []).includes(t.bridge)),
-  `missing: ${tools.map((t) => t.bridge).filter((b) => !(ready?.tools || []).includes(b)).join(',')}`)
+  tools.filter((t) => !t.local).every((t) => (ready?.tools || []).includes(t.bridge)),
+  `missing: ${tools.filter((t) => !t.local).map((t) => t.bridge).filter((b) => !(ready?.tools || []).includes(b)).join(',')}`)
 
 try {
   const library = await call('library', { limit: 3 })
