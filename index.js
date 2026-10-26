@@ -351,7 +351,9 @@ const num = (description) => ({ type: 'number', description })
 const int = (description) => ({ type: 'integer', description })
 const bool = (description) => ({ type: 'boolean', description })
 
-const URL_ARG = str('视频链接（公开可看）')
+const URL_ARG = str(
+  '视频链接（公开可看），或本地视频文件路径（如 D:\\videos\\a.mp4 / ~/a.mov / file:///D:/a.mp4）。本地文件不下载。',
+)
 const LANG_ARG = str('zh|yue|ja|en')
 const MODEL_ARG = str('whisper 模型，默认 small')
 const PROMPT_ARG = str('ASR 提示词（方言/术语）')
@@ -708,6 +710,9 @@ function budgetReport(ledger) {
 const PROMPT = `## vidlens（本地视频取证）
 
 拿到公开视频链接时，默认「一次答完」，别让用户陪你看片：
+
+本地文件（给路径或 file:// URL）同样适用：不下载、不联网，直接读盘上的文件；
+区别只是没有平台字幕和评论区，台词一律走本地 ASR、画面字走本地 OCR。
 
 1. \`vidlens_meta\`（0 下载）确认时长/字幕；
 2. \`vidlens_brief\`（默认 digest，约 1.5k 字：章节 + 5 句关键台词 + 全文路径）；

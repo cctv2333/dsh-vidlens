@@ -159,6 +159,14 @@ assert('bridge imported vidlens', !!ready?.ok, ready?.error || '')
   }
   assert('no personal paths baked into the shipped code', bad.length === 0, bad.join(', '))
 }
+// A local file is not a URL. The Python core accepts paths since 1.6.0, so the
+// schema the model reads has to say so -- otherwise nobody ever passes a path.
+{
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(path.join(ROOT, 'index.js'), 'utf8')
+  assert('url parameter advertises local paths', src.includes('本地视频文件路径'), '')
+  assert('system prompt says local files skip download', src.includes('本地文件（给路径'), '')
+}
 assert('bridge exposes every tool the Host registers',
   tools.filter((t) => !t.local).every((t) => (ready?.tools || []).includes(t.bridge)),
   `missing: ${tools.filter((t) => !t.local).map((t) => t.bridge).filter((b) => !(ready?.tools || []).includes(b)).join(',')}`)

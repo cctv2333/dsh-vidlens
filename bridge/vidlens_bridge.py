@@ -263,6 +263,15 @@ def _dir_for_url(url: str):
     for d in dirs:  # multi-part uploads: BV1xx_p1, BV1xx_p2 ...
         if d.name.lower().startswith(low + "_"):
             return d
+    # A local file gets an id like `local-<stem>-<sha1>`, so `D:\a.mp4` must also
+    # match on the stem -- otherwise `vidlens_seek` cannot find the transcript that
+    # `vidlens_brief` just wrote for the very same file.
+    stem = os.path.splitext(os.path.basename(url.rstrip("\\/")))[0]
+    stem = re.sub(r"[^\w.-]+", "-", stem.strip()).strip("-._").lower()
+    if stem and os.path.isfile(url):
+        for d in dirs:
+            if d.name.lower().startswith(f"local-{stem}-"):
+                return d
     return None
 
 

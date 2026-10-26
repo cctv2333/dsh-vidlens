@@ -36,6 +36,7 @@
 | 行为约束 | 只在 MCP instructions 里 | 独立的 system-prompt 小节：先 meta→plan→抽样，绝不下整片 |
 | 取消 | 断开连接 | `exec.signal` 取消时重启桥进程，不留下卡死的下载 |
 | 整片下载 | `video_full(confirm=true)` 存在 | **故意不提供**：需要画面就用 sheet/frames/scan |
+| 本地视频 | 与 Python 核同步（1.6.0 起） | 所有 `url` 参数都接受本地路径：`D:\a.mp4`、`file:///D:/a.mp4`、`~/a.mov` |
 
 ## 安装
 
@@ -88,7 +89,7 @@ dsh plugin --profile desktop add dsh-vidlens
 
 字段都可省略：`projectDir` 默认依次取 `<本包>/../vidlens`、`D:\vidlens\vidlens`、`$VIDLENS_PROJECT`；`pythonPath` 默认取工程 `.venv` 里的解释器。
 
-## 工具（18 个）
+## 工具（21 个）
 
 **基础四件（0 下载）**
 
