@@ -86,6 +86,10 @@ if str(PROJECT) not in sys.path:
     sys.path.insert(0, str(PROJECT))
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+# The bridge turns `Image` objects into file paths (see `_image_entry`), so a
+# large sheet costs the plugin nothing. Say so, or vl_mcp's `auto` policy would
+# drop the picture here and the tool would return a path with no attachment.
+os.environ.setdefault("VIDLENS_INLINE_IMAGES", "always")
 
 # ---------------------------------------------------------------------- imports
 IMPORT_ERROR = None
