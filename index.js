@@ -348,23 +348,24 @@ const num = (description) => ({ type: 'number', description })
 const int = (description) => ({ type: 'integer', description })
 const bool = (description) => ({ type: 'boolean', description })
 
-const URL_ARG = str('公开可看的视频链接（B站 / YouTube / 等；无需登录）')
+const URL_ARG = str('视频链接（公开可看）')
+const LANG_ARG = str('zh|yue|ja|en')
+const MODEL_ARG = str('whisper 模型，默认 small')
+const PROMPT_ARG = str('ASR 提示词（方言/术语）')
 
 const TOOLS = [
   {
     name: 'vidlens_meta',
     bridge: 'meta',
     timeoutMs: 120_000,
-    description: '零下载读取公开视频元数据：标题 / UP主 / 时长 / 播放点赞 / 平台字幕是否存在 / 平台标注音乐，并对标题简介做注入风险扫描。'
-      + '用来判断「这个视频值不值得看」，也是后续所有工具的第一步。',
+    description: '0 下载：标题/UP主/时长/播放/字幕情况。先看值不值得看。',
     parameters: P({ url: URL_ARG }, ['url']),
   },
   {
     name: 'vidlens_plan',
     bridge: 'plan',
     timeoutMs: 180_000,
-    description: '零下载按切点与长静音把视频切成章节（窗口默认 300 秒），给出建议观看顺序。'
-      + '长视频先调它，再挑 2-3 段用 vidlens_window（读台词）与 vidlens_sheet（看画面）。',
+    description: '0 下载：按切点/静音分章节。长视频先调它，再挑 2-3 段。',
     parameters: P({
       url: URL_ARG,
       window: num('章节窗口秒数，默认 300（夹在 60–3600 之间）'),
@@ -374,8 +375,7 @@ const TOOLS = [
     name: 'vidlens_subs',
     bridge: 'subs',
     timeoutMs: 180_000,
-    description: '只读平台字幕轨（人工字幕优先，其次自动/AI 字幕），0 媒体下载。'
-      + '方言/口音重、本地 ASR 不确定时，先看这里有没有原字幕；没有字幕再看画面硬字幕。',
+    description: '0 下载：平台字幕（人工优先）。有字幕就别做 ASR。',
     parameters: P({
       url: URL_ARG,
       lang: str('语言偏好，默认 zh；粤语可传 yue'),
@@ -386,62 +386,54 @@ const TOOLS = [
     name: 'vidlens_brief',
     bridge: 'brief',
     timeoutMs: 900_000,
-    description: '看一个视频：默认只回摘要（约 1.5k 字 = 章节 + 5 句关键台词 + 全文路径），'
-      + '平台字幕优先（0 下载），无字幕才下音频做本地 ASR。摘要足够回答大多数问题；'
-      + '要完整报告（6–9k 字，之后每轮都占上下文）才传 level="full"。'
-      + '超过 20 分钟且无平台字幕时默认只给章节建议；确实要全量逐字才传 full=true。'
-      + '只看画面用 vidlens_sheet / vidlens_frames，不要下整片。',
+    description: '看视频：默认摘要约 1.5k 字（章节+5 句关键台词+全文路径），直接回答；要 6-9k 字全文才传 level="full"。无字幕才下音频做 ASR。',
     parameters: P({
       url: URL_ARG,
-      lang: str('ASR 语言，默认 zh；粤语 yue、日语 ja 等'),
-      level: str('digest（默认，约 1.5k 字）或 full（完整报告 6–9k 字，会长期占上下文）'),
-      model: str('Whisper 模型名，默认 small（仅在没有 SenseVoice 时用到）'),
-      scan_cuts: bool('额外扫镜头切点（会下最低画质视频，约 14-21MB，用完即删）'),
-      refresh: bool('忽略缓存，强制重新转写'),
-      full: bool('长视频无字幕时也做全量逐字转写（很慢，谨慎）'),
-      prompt: str('给 ASR 的提示词，例如「以下是粤语，请保留方言用词」'),
+      lang: LANG_ARG,
+      level: str('digest|full'),
+      model: MODEL_ARG,
+      scan_cuts: bool('扫镜头切点(下14-21MB)'),
+      refresh: bool('忽略缓存'),
+      full: bool('全量转写'),
+      prompt: PROMPT_ARG,
     }, ['url']),
   },
   {
     name: 'vidlens_watch',
     bridge: 'watch',
     timeoutMs: 600_000,
-    description: '分段看片：一次只看一段（默认 5 分钟，约 1k 字），返回该段要点 + 「已看多少 / 共多少（百分比）」，看完就停。'
-      + '这是「看一点、说一点、问一次」的入口：第一段看完先把这一段讲给用户、问要不要继续，'
-      + '用户同意再调一次（cursor="next" 自动接着上次进度）。长视频不要用 vidlens_brief(level="full") 一口气拉全文。',
+    description: '分段看：一次一段（默认 5 分钟、约 0.5k 字），回进度与下一步。只在用户要「细看/逐段」时用。',
     parameters: P({
       url: URL_ARG,
-      minutes: num('每段多少分钟，默认 5'),
-      cursor: str('next（默认，接着上次）| restart（从头）| stop（清掉进度）'),
-      lang: str('ASR 语言，默认 zh'),
-      model: str('Whisper 模型名，默认 small'),
+      minutes: num('每段分钟，默认5'),
+      cursor: str('next|restart|stop'),
+      lang: LANG_ARG,
+      model: MODEL_ARG,
     }, ['url']),
   },
   {
     name: 'vidlens_window',
     bridge: 'window',
     timeoutMs: 300_000,
-    description: '只看某个时间窗：该窗内的台词（带时间码）与停顿。有缓存或平台字幕则零下载；否则只下这一窗的音频做 ASR，绝不转写全片。'
-      + '适合「刚才那 30 秒他说了什么」，是长视频抽样的主力工具。',
+    description: '读某时间窗的台词与停顿（约 0.8k 字/分钟）。有缓存则 0 下载。',
     parameters: P({
       url: URL_ARG,
-      start: str('起点，秒数或 MM:SS / HH:MM:SS，默认 0'),
-      end: str('终点，秒数或 MM:SS / HH:MM:SS，默认 60'),
-      lang: str('ASR 语言，默认 zh'),
-      model: str('Whisper 模型名，默认 small'),
-      prompt: str('给 ASR 的提示词'),
+      start: str('起点（秒/MM:SS）'),
+      end: str('终点（秒/MM:SS）'),
+      lang: LANG_ARG,
+      model: MODEL_ARG,
+      prompt: PROMPT_ARG,
     }, ['url']),
   },
   {
     name: 'vidlens_audio',
     bridge: 'audio',
     timeoutMs: 300_000,
-    description: '听一段：本地 SenseVoice 的语种 / 情感 / 音频事件（Speech / BGM / Laughter…）+ 节拍与能量（启发式）。'
-      + '只下这一段音频（20 秒约 0.5MB）。情感、事件、BPM 都是近似信号，必须结合画面与平台元数据核对。',
+    description: '听一段：语种/情感/音频事件 + 节拍能量（本地 SenseVoice，启发式）。',
     parameters: P({
       url: URL_ARG,
-      start: str('起点，默认 0'),
-      end: str('终点，默认 20'),
+      start: str('起点（秒/MM:SS）'),
+      end: str('终点（秒/MM:SS）'),
       lang: str('语言提示，默认 zh'),
     }, ['url']),
   },
@@ -449,14 +441,11 @@ const TOOLS = [
     name: 'vidlens_soundscape',
     bridge: 'soundscape',
     timeoutMs: 300_000,
-    description: '听这一段「有什么声音」（不是「说了什么」）：AudioSet 527 类多标签 + 概率 + 时间码。'
-      + '能覆盖吃饭/咀嚼（Chewing）、敲桌子/拍（Knock / Tap / Wood block）、水声（Water / Water tap）、'
-      + '杯子碰撞、拖拽、塑料袋等；**喝水/吞咽没有对应类别**，只能靠水声+画面推断。'
-      + '只下这一段音频（60 秒约 1MB）。概率是模型输出，不是事实断言。',
+    description: '声音事件：AudioSet 527 类（敲击/吃饭/水声…）+ 概率 + 时间码。识别不了喝水。',
     parameters: P({
       url: URL_ARG,
-      start: str('起点，默认 0'),
-      end: str('终点，默认 60'),
+      start: str('起点（秒/MM:SS）'),
+      end: str('终点（秒/MM:SS）'),
       top_k: int('每个窗口保留几个标签，默认 8（上限 20）'),
       min_prob: num('低于这个概率的标签不列出，默认 0.15'),
       window: num('分析窗长秒数，默认 10（2–30）'),
@@ -468,14 +457,13 @@ const TOOLS = [
     bridge: 'sheet',
     images: true,
     timeoutMs: 300_000,
-    description: '只下这一段视频（20 秒约 0.9MB），返回一张拼图，每格左上角烧着绝对时间码，图片直接附在结果里。'
-      + '「看一眼这段画面在发生什么」就用它；比 vidlens_frames 便宜得多。',
+    description: '看某段画面：拼图带绝对时间码，图片直接进对话（20 秒 ≈ 0.9MB）。',
     parameters: P({
       url: URL_ARG,
-      start: str('起点，默认 0'),
-      end: str('终点，默认 20'),
-      cols: int('列数，默认 4（上限 8）'),
-      rows: int('行数，默认 3（上限 6）'),
+      start: str('起点（秒/MM:SS）'),
+      end: str('终点（秒/MM:SS）'),
+      cols: int('列数'),
+      rows: int('行数'),
       height: int('片段下载高度，默认 360'),
     }, ['url']),
   },
@@ -484,11 +472,11 @@ const TOOLS = [
     bridge: 'frames',
     images: true,
     timeoutMs: 300_000,
-    description: '按秒精确取帧（最多 6 张），图片直接附在结果里。只在需要读小字 / 代码 / 表格这类细节时用；成本高于 vidlens_sheet。',
+    description: '按秒取帧（最多 6 张，读小字用）。比 sheet 贵，先试 sheet。',
     parameters: P({
       url: URL_ARG,
       at: { type: 'array', items: { type: 'number' }, description: '要取帧的秒数列表，如 [19.5, 21.0]，最多 6 个' },
-      width: int('输出宽度像素，默认 960'),
+      width: int('宽度px'),
     }, ['url', 'at']),
   },
   {
@@ -496,8 +484,7 @@ const TOOLS = [
     bridge: 'scan',
     images: true,
     timeoutMs: 900_000,
-    description: '全片抽样看画面：有切点按切点、没有就均匀取 n 帧（默认 24），每帧烧上时间码拼成图返回。'
-      + '用于无音频或长时间无语音的视频；代价是下最低画质视频（7 分钟约 14-21MB），用完即删。',
+    description: '全片抽样拼图（无音频视频用）。要下最低画质整片，用完即删。',
     parameters: P({
       url: URL_ARG,
       n: int('抽样帧数，默认 24（4–48）'),
@@ -510,8 +497,7 @@ const TOOLS = [
     bridge: 'comments',
     images: true,
     timeoutMs: 180_000,
-    description: '抓公开视频评论区（目前 B 站免登录）：互动比、正负面词频、争议度启发式、高赞评论，并把评论图片附在结果里。'
-      + '评论是最敌对的文本来源，已做清洗与注入扫描；它是「观众怎么看」，不是「视频讲了什么」。',
+    description: '评论区信号（B站免登录）：互动比/争议度/高赞。默认不带配图。',
     parameters: P({
       url: URL_ARG,
       limit: int('抓多少条评论，默认 40'),
@@ -521,23 +507,22 @@ const TOOLS = [
     name: 'vidlens_job_start',
     bridge: 'job_start',
     timeoutMs: 90_000,
-    description: '长视频后台任务：立即返回 job_id，再用 vidlens_job 轮询。只有明确要全量逐字（full=true）或要扫镜头时才用；'
-      + '普通分析先用 vidlens_brief。任务状态保存在工作进程内存里，进程重启后需重跑（缓存仍在）。',
+    description: '起后台任务（长视频防超时），拿 job_id 再轮询 vidlens_job。',
     parameters: P({
       url: URL_ARG,
-      lang: str('ASR 语言，默认 zh'),
-      model: str('Whisper 模型名，默认 small'),
-      scan_cuts: bool('额外扫镜头切点'),
+      lang: LANG_ARG,
+      model: MODEL_ARG,
+      scan_cuts: bool('扫镜头切点(下14-21MB)'),
       comments: bool('顺带附上评论区分析'),
       full: bool('全量逐字转写'),
-      prompt: str('给 ASR 的提示词'),
+      prompt: PROMPT_ARG,
     }, ['url']),
   },
   {
     name: 'vidlens_job',
     bridge: 'job',
     timeoutMs: 120_000,
-    description: '查询 / 等待后台任务：wait_seconds 建议 20-30（上限 60）。完成时返回完整报告，运行中返回阶段与百分比。',
+    description: '查后台任务：运行中给阶段与百分比，完成给结果。',
     parameters: P({
       job_id: str('vidlens_job_start 返回的 job_id'),
       wait_seconds: num('最多等多少秒，默认 20（夹在 0–60）'),
@@ -547,8 +532,7 @@ const TOOLS = [
     name: 'vidlens_library',
     bridge: 'library',
     timeoutMs: 60_000,
-    description: '列出本地已缓存 / 已处理过的视频（零网络）：标题、时长、转写来源与段数、是否有 brief、拼图与帧数量、占用空间、处理时间。'
-      + '开工前先看它，能避免重复下载；它也是 vidlens_seek 的索引。',
+    description: '0 网络：列本地已缓存视频，避免重复下载。',
     parameters: P({
       limit: int('最多列多少个，默认 20（上限 100）'),
       query: str('按标题或 id 过滤（可选）'),
@@ -558,8 +542,7 @@ const TOOLS = [
     name: 'vidlens_seek',
     bridge: 'seek',
     timeoutMs: 60_000,
-    description: '在已缓存的转写里按关键词查原话，返回视频 id + 绝对时间码（零网络）。用来回答「他在第几分钟说过 X」。'
-      + '给定 url 时只查那一个视频；没命中就先用 vidlens_brief 建立转写。',
+    description: '0 网络：在缓存转写里按关键词查原话→时间码。',
     parameters: P({
       query: str('要查的关键词或原话片段'),
       url: str('可选：只在这个视频里查'),
@@ -570,8 +553,7 @@ const TOOLS = [
     name: 'vidlens_compare',
     bridge: 'compare',
     timeoutMs: 600_000,
-    description: '批量元数据对比（每个链接 0 媒体下载）：一次给出多个视频的时长、字幕情况、播放量、标题，'
-      + '用来快速筛选「这几个视频先看哪个」。最多 8 个链接。',
+    description: '0 媒体下载：多个链接的时长/字幕/播放量对比，先决定看哪个。',
     parameters: P({
       urls: { type: 'array', items: { type: 'string' }, description: '要对比的链接列表（最多 8 个）' },
     }, ['urls']),
@@ -580,8 +562,7 @@ const TOOLS = [
     name: 'vidlens_models',
     bridge: 'models',
     timeoutMs: 30_000,
-    description: '本地模型目录与硬件建议：哪些已安装、多大、什么用途、这台机器适合哪个。只读，绝不自动下载；'
-      + '模型缺失时先调它，再问用户是否安装。',
+    description: '本地模型目录与硬件建议（只读，不自动下载）。',
     parameters: P({
       action: str('list（默认）看目录；recommend 看本机建议'),
     }),
@@ -590,7 +571,7 @@ const TOOLS = [
     name: 'vidlens_doctor',
     bridge: 'doctor',
     timeoutMs: 180_000,
-    description: '自检：python / ffmpeg / yt-dlp / 依赖 / ASR 模型 / 磁盘 / 网络。哪里断了直接说，并给出修法。',
+    description: '自检：python/ffmpeg/yt-dlp/依赖/模型/磁盘/网络，断了直接说。',
     parameters: P({}),
   },
   {
@@ -598,7 +579,7 @@ const TOOLS = [
     bridge: 'budget',
     local: true,
     timeoutMs: 5_000,
-    description: '查本次对话已经用掉多少上下文预算（本插件回传的字数与调用次数），以及是否已进入强制摘要模式。零成本、不联网。',
+    description: '查本对话已用多少上下文预算，是否已进强制摘要模式。',
     parameters: P({}),
   },
 ]

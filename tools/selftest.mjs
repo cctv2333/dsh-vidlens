@@ -40,7 +40,10 @@ for (const t of tools) {
   assert(`${t.name}: parameters is an object schema`,
     t.parameters && t.parameters.type === 'object' && t.parameters.properties,
     JSON.stringify(t.parameters || {}).slice(0, 120))
-  assert(`${t.name}: description >= 30 chars`, String(t.description || '').length >= 30)
+  // Schemas cost tokens on every request, so "short but specific" is the goal.
+  // 16 chars still rules out placeholders; the old 30-char bar just forced padding.
+  assert(`${t.name}: description >= 16 chars`, String(t.description || '').length >= 16,
+    String(t.description || ''))
   assert(`${t.name}: has a deadline`, Number(t.timeoutMs) > 0, `${t.timeoutMs}ms`)
   for (const req of t.parameters.required || []) {
     assert(`${t.name}: required '${req}' is declared`, !!t.parameters.properties[req])
