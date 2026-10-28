@@ -582,9 +582,9 @@ const TOOLS = [
     name: 'vidlens_models',
     bridge: 'models',
     timeoutMs: 900_000,
-    description: '模型目录 / 硬件建议 / 下载（大小、落点、换目录都说清；confirm=true 才真下）。',
+    description: '模型目录 / 硬件建议 / 下载（大小、落点、换目录都说清；confirm=true 才真下；同一时刻只允许一个下载，超时后用 status 查）。',
     parameters: P({
-      action: str('list（默认）看目录；recommend 看本机建议；download 装模型'),
+      action: str('list（默认）看目录；recommend 看本机建议；download 装模型；status 看下载是否还在跑（客户端超时后用）'),
       name: str('download 时的模型名，如 ced-mini / whisper-small'),
       confirm: bool('download 时确认真的下载（不传只报大小与落点）'),
     }),
