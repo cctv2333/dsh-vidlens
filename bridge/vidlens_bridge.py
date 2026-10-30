@@ -90,6 +90,8 @@ os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 # large sheet costs the plugin nothing. Say so, or vl_mcp's `auto` policy would
 # drop the picture here and the tool would return a path with no attachment.
 os.environ.setdefault("VIDLENS_INLINE_IMAGES", "always")
+# This surface exposes vidlens_* names; core text must not say video_* (R-3).
+os.environ.setdefault("VIDLENS_TOOL_PREFIX", "vidlens_")
 
 # ---------------------------------------------------------------------- imports
 IMPORT_ERROR = None
@@ -340,6 +342,14 @@ def tool_library(args: dict) -> str:
             flags.append(f"拼图×{e['sheets']}")
         if e["frames"]:
             flags.append(f"帧×{e['frames']}")
+        # A cache dir can be a leftover: no meta, no transcript, 0 bytes. Saying so
+        # here is cheaper than a caller wondering why "19 个视频" includes 2 duds (R-4).
+        if not e["lines"]:
+            flags.append("⚠无转写")
+        if not e.get("title"):
+            flags.append("⚠无元数据")
+        if not e["mb"]:
+            flags.append("⚠空目录")
         meta_bits = [core.hms(e["duration"])]
         if e["lines"]:
             meta_bits.append(f"{e['lines']} 段")
