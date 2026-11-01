@@ -20,14 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout this plugin
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: dsh-vidlens
 
       # The plugin drives the Python core; the selftest needs it as a sibling
       # directory because that is the layout the bridge auto-detects.
       - name: checkout vidlens (sibling)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cctv2333/vidlens
           path: vidlens
@@ -54,7 +54,7 @@ jobs:
     name: npm package contents
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
@@ -90,7 +90,7 @@ jobs:
     name: python bridge compiles
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
